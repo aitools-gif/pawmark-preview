@@ -20,7 +20,7 @@ async function restore(){try{
  await save();
 }catch(e){setStatus('草稿恢复失败，请重新上传照片。',true)}}
 function setStatus(message,error=false){$('status').textContent=message;$('status').classList.toggle('error',error)}
-async function api(url,body){const response=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(240000)}:undefined);const data=await response.json();if(!response.ok||data.error)throw new Error(data.error||'请求未完成，请稍后重试');return data}
+async function api(url,body,timeoutMs=240000){const response=await fetch(url,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(timeoutMs)}:undefined);const data=await response.json();if(!response.ok||data.error)throw new Error(data.error||'请求未完成，请稍后重试');return data}
 function load(src){return new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('照片无法读取，请换一张图片'));image.src=src})}
 function blobData(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=reject;r.readAsDataURL(blob)})}
 async function compress(src,max=1200,quality=.88){const img=await load(src);const scale=Math.min(1,max/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);return c.toDataURL('image/jpeg',quality)}
@@ -53,7 +53,7 @@ async function runGeneration(){
   if(!jobStage){jobStage='complete';layerAttempt=0;requestId=crypto.randomUUID();baseIcon='';icon='';card='';orderId='';paid=false;captionRevision++;$('resultActions').style.display='none';$('editNote').classList.add('hidden')}
   await save();
   $('generateLabel').textContent='正在生成设计…';setStatus('正在生成设计…');
-  const data=await api('https://traveltag2.jgs154180.chatgpt.site/api/generate-magnet',{photo,requestId,stage:'complete',layerAttempt});
+  const data=await api('https://traveltag2.jgs154180.chatgpt.site/api/generate-magnet',{photo,requestId,stage:'complete',layerAttempt},450000);
   const nativeLayer=stageImage(data,'layer');await transparentIcon(nativeLayer);baseIcon=nativeLayer;jobStage='';await save();await queueCaption();setStatus('设计已生成。');
  }catch(e){if(e.invalidLayer)layerAttempt++;await save();setStatus(e.name==='TimeoutError'?'本步骤等待超时，点击重试会复用已完成的步骤。':e.message,true)}
  finally{clearInterval(timer);busy=false;$('generate').disabled=false;$('photo').disabled=false;$('progress').style.display='none';$('generateLabel').textContent=jobStage?'继续生成设计':icon?'重新生成':'生成设计'}
